@@ -55,7 +55,8 @@ const AISelectorCommands = ({ onSelect }: AISelectorCommandsProps) => {
         ))}
       </CommandGroup>
       <CommandSeparator />
-      <CommandGroup heading="Use AI to do more">
+      {/* Functionality not working yet */}
+      {/* <CommandGroup heading="Use AI to do more">
         <CommandItem
           onSelect={() => {
             const pos = editor.state.selection.from;
@@ -68,7 +69,7 @@ const AISelectorCommands = ({ onSelect }: AISelectorCommandsProps) => {
           <StepForward className="h-4 w-4 text-purple-500" />
           Continue writing
         </CommandItem>
-      </CommandGroup>
+      </CommandGroup> */}
     </>
   );
 };
