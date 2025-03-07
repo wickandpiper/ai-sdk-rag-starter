@@ -55,6 +55,8 @@ module.exports = {
       },
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
+        title: ["var(--font-title)", ...fontFamily.sans],
+        default: ["var(--font-default)", ...fontFamily.sans],
       },
       keyframes: {
         "accordion-down": {
@@ -70,7 +72,69 @@ module.exports = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            maxWidth: '100ch',
+            color: 'var(--tw-prose-body)',
+            '[class~="lead"]': {
+              color: 'var(--tw-prose-lead)',
+            },
+            a: {
+              color: 'var(--tw-prose-links)',
+              textDecoration: 'underline',
+              fontWeight: '500',
+            },
+            strong: {
+              color: 'var(--tw-prose-bold)',
+              fontWeight: '600',
+            },
+            'a strong': {
+              color: 'inherit',
+            },
+            'blockquote strong': {
+              color: 'inherit',
+            },
+            'thead strong': {
+              color: 'inherit',
+            },
+            ol: {
+              listStyleType: 'decimal',
+            },
+            'ol[type="A"]': {
+              listStyleType: 'upper-alpha',
+            },
+            'ol[type="a"]': {
+              listStyleType: 'lower-alpha',
+            },
+            'ol[type="A" s]': {
+              listStyleType: 'upper-alpha',
+            },
+            'ol[type="a" s]': {
+              listStyleType: 'lower-alpha',
+            },
+            'ol[type="I"]': {
+              listStyleType: 'upper-roman',
+            },
+            'ol[type="i"]': {
+              listStyleType: 'lower-roman',
+            },
+            'ol[type="I" s]': {
+              listStyleType: 'upper-roman',
+            },
+            'ol[type="i" s]': {
+              listStyleType: 'lower-roman',
+            },
+            'ol[type="1"]': {
+              listStyleType: 'decimal',
+            },
+            ul: {
+              listStyleType: 'disc',
+            },
+          },
+        },
+      },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 }

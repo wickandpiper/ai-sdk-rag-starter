@@ -10,11 +10,6 @@ export default function NewNote() {
 
   const [ title, setTitle ] = useState("");
 
-  const handleSave = async () => {
-    console.log('Saving note:');
-    // Here we would typically save to a database
-  };
-
   return (
     <div className='min-h-screen bg-purple-50'>
       {/* Breadcrumb navigation */}
@@ -44,10 +39,6 @@ export default function NewNote() {
                 className='bg-transparent text-xl font-semibold text-purple-900 placeholder-purple-300 focus:outline-none'
               />
             </div>
-            <Button onClick={handleSave} className='flex items-center gap-2' variant='default'>
-              <Save className='h-4 w-4' />
-              <span>Save</span>
-            </Button>
           </div>
         </div>
       </header>
