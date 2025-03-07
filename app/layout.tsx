@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { Inter, Lora, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-const title = Lora({ subsets: ["latin"], variable: "--font-title" });
-const body = Source_Sans_3({ subsets: ["latin"], variable: "--font-default" });
+const title = Inter({ subsets: ["latin"], variable: "--font-title" });
+const body = Inter({ subsets: ["latin"], variable: "--font-default" });
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -18,7 +19,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${title.variable} ${body.variable} ${inter.className}`}>{children}</body>
+      <body className={`${inter.variable} ${title.variable} ${body.variable} ${inter.className}`}>
+        {children}
+        <Toaster position="top-right" richColors />
+      </body>
     </html>
   );
 }

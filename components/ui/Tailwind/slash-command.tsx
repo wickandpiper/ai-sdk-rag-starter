@@ -12,9 +12,11 @@ import {
   TextQuote,
   Twitter,
   Youtube,
+  Loader2,
 } from "lucide-react";
 import { Command, createSuggestionItems, renderItems } from "novel";
 import { uploadFn } from "./image-upload";
+import { toast } from "sonner";
 
 export const suggestionItems = createSuggestionItems([
   {
@@ -126,6 +128,109 @@ export const suggestionItems = createSuggestionItems([
     },
   },
   {
+    title: "AI Image",
+    description: "Generate an image using AI.",
+    searchTerms: ["ai", "dall-e", "generate", "image", "picture"],
+    icon: <ImageIcon size={18} />,
+    command: async ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).run();
+      
+      // Prompt for image description
+      const imagePrompt = prompt("Describe the image you want to generate:");
+      
+      if (imagePrompt && imagePrompt.trim() !== "") {
+        try {
+          // Get the current position
+          const pos = editor.view.state.selection.from;
+          
+          // Insert a placeholder node that we can replace later
+          const placeholderId = `placeholder-${Date.now()}`;
+          editor.chain().focus().insertContent(`🖼️ [Generating AI image...]`).run();
+          
+          // Store the position where we'll insert the image
+          const insertPos = pos;
+          
+          // Show toast notification
+          toast.promise(
+            // The promise to track
+            (async () => {
+              // Call the API to generate the image
+              const response = await fetch("/api/generate-image", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ prompt: imagePrompt }),
+              });
+              
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to generate image");
+              }
+              
+              return await response.json();
+            })(),
+            {
+              loading: 'Generating your AI image...',
+              success: (data) => {
+                // Find the current selection
+                const currentPos = editor.view.state.selection.from;
+                
+                // Find the placeholder text
+                const docContent = editor.view.state.doc.textContent;
+                const placeholderText = "🖼️ [Generating AI image...]";
+                const placeholderPos = docContent.indexOf(placeholderText);
+                
+                if (placeholderPos >= 0) {
+                  // Calculate the actual document position
+                  const startPos = placeholderPos;
+                  const endPos = startPos + placeholderText.length;
+                  
+                  // Delete the placeholder
+                  editor.commands.deleteRange({
+                    from: startPos,
+                    to: endPos,
+                  });
+                  
+                  // Insert the image at the same position
+                  editor.chain().focus().setImage({ src: data.url, alt: imagePrompt }).run();
+                } else {
+                  // If placeholder not found, just append the image at current position
+                  editor.chain().focus().setImage({ src: data.url, alt: imagePrompt }).run();
+                }
+                
+                return 'Image generated successfully!';
+              },
+              error: (error) => {
+                // Find the placeholder text
+                const docContent = editor.view.state.doc.textContent;
+                const placeholderText = "🖼️ [Generating AI image...]";
+                const placeholderPos = docContent.indexOf(placeholderText);
+                
+                if (placeholderPos >= 0) {
+                  // Calculate the actual document position
+                  const startPos = placeholderPos;
+                  const endPos = startPos + placeholderText.length;
+                  
+                  // Delete the placeholder
+                  editor.commands.deleteRange({
+                    from: startPos,
+                    to: endPos,
+                  });
+                }
+                
+                return error.message || 'Failed to generate image';
+              }
+            }
+          );
+        } catch (error: any) {
+          console.error("Error generating AI image:", error);
+          toast.error(error.message || "Failed to generate image. Please try again.");
+        }
+      }
+    },
+  },
+  {
     title: "Youtube",
     description: "Embed a Youtube video.",
     searchTerms: ["video", "youtube", "embed"],
@@ -137,7 +242,7 @@ export const suggestionItems = createSuggestionItems([
         /^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?$/,
       );
 
-      if (ytregex.test(videoLink)) {
+      if (videoLink && ytregex.test(videoLink)) {
         editor
           .chain()
           .focus()
@@ -146,10 +251,11 @@ export const suggestionItems = createSuggestionItems([
             src: videoLink,
           })
           .run();
-      } else {
-        if (videoLink !== null) {
-          alert("Please enter a correct Youtube Video Link");
-        }
+        
+        toast.success("YouTube video embedded successfully");
+      } else if (videoLink !== null) {
+        toast.error("Please enter a correct YouTube video link");
+        editor.chain().focus().deleteRange(range).run();
       }
     },
   },
@@ -162,7 +268,7 @@ export const suggestionItems = createSuggestionItems([
       const tweetLink = prompt("Please enter Twitter Link");
       const tweetRegex = new RegExp(/^https?:\/\/(www\.)?x\.com\/([a-zA-Z0-9_]{1,15})(\/status\/(\d+))?(\/\S*)?$/);
 
-      if (tweetRegex.test(tweetLink)) {
+      if (tweetLink && tweetRegex.test(tweetLink)) {
         editor
           .chain()
           .focus()
@@ -171,10 +277,11 @@ export const suggestionItems = createSuggestionItems([
             src: tweetLink,
           })
           .run();
-      } else {
-        if (tweetLink !== null) {
-          alert("Please enter a correct Twitter Link");
-        }
+        
+        toast.success("Tweet embedded successfully");
+      } else if (tweetLink !== null) {
+        toast.error("Please enter a correct Twitter link");
+        editor.chain().focus().deleteRange(range).run();
       }
     },
   },
