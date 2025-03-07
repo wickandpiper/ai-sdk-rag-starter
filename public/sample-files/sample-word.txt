@@ -1,0 +1,12 @@
+Sample Word Document
+
+This is a sample Word document created for testing purposes.
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget ultricies nisl nisl eget nisl. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget ultricies nisl nisl eget nisl.
+
+Features of this document:
+- Simple formatting
+- Multiple paragraphs
+- Sample text
+
+This document can be used for testing the document preview functionality in the application. 
