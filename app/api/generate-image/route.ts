@@ -62,10 +62,11 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     const data = await response.json();
+    const imageUrl = data.data[0].url;
 
-    // Return the image URL
+    // Return the OpenAI image URL
     return new Response(JSON.stringify({ 
-      url: data.data[0].url 
+      url: imageUrl
     }), {
       headers: {
         "Content-Type": "application/json",
@@ -74,7 +75,7 @@ export async function POST(req: Request): Promise<Response> {
   } catch (error) {
     console.error("Error generating image:", error);
     return new Response(
-      JSON.stringify({ error: "Failed to generate image" }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Failed to generate image" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }

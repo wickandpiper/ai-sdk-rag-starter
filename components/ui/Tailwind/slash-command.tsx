@@ -154,8 +154,8 @@ export const suggestionItems = createSuggestionItems([
           toast.promise(
             // The promise to track
             (async () => {
-              // Call the API to generate the image
-              const response = await fetch("/api/generate-image", {
+              // Step 1: Generate the image with OpenAI
+              const generateResponse = await fetch("/api/generate-image", {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -163,19 +163,41 @@ export const suggestionItems = createSuggestionItems([
                 body: JSON.stringify({ prompt: imagePrompt }),
               });
               
-              if (!response.ok) {
-                const errorData = await response.json();
+              if (!generateResponse.ok) {
+                const errorData = await generateResponse.json();
                 throw new Error(errorData.error || "Failed to generate image");
               }
               
-              return await response.json();
+              const generateData = await generateResponse.json();
+              const openaiImageUrl = generateData.url;
+              
+              // Step 2: Upload the image to Firebase Storage
+              try {
+                const uploadResponse = await fetch("/api/upload-ai-image", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ imageUrl: openaiImageUrl }),
+                });
+                
+                if (uploadResponse.ok) {
+                  const uploadData = await uploadResponse.json();
+                  return { url: uploadData.url, isFirebase: true };
+                } else {
+                  // If Firebase upload fails, use the OpenAI URL directly
+                  console.warn("Failed to upload to Firebase, using OpenAI URL directly");
+                  return { url: openaiImageUrl, isFirebase: false };
+                }
+              } catch (uploadError) {
+                // If there's an error with the upload, use the OpenAI URL directly
+                console.warn("Error uploading to Firebase:", uploadError);
+                return { url: openaiImageUrl, isFirebase: false };
+              }
             })(),
             {
               loading: 'Generating your AI image...',
               success: (data) => {
-                // Find the current selection
-                const currentPos = editor.view.state.selection.from;
-                
                 // Find the placeholder text
                 const docContent = editor.view.state.doc.textContent;
                 const placeholderText = "🖼️ [Generating AI image...]";
@@ -199,7 +221,10 @@ export const suggestionItems = createSuggestionItems([
                   editor.chain().focus().setImage({ src: data.url, alt: imagePrompt }).run();
                 }
                 
-                return 'Image generated successfully!';
+                // Show different success message based on whether we used Firebase or not
+                return data.isFirebase 
+                  ? 'Image generated and saved to storage!' 
+                  : 'Image generated successfully!';
               },
               error: (error) => {
                 // Find the placeholder text
