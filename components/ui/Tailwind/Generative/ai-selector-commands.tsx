@@ -38,8 +38,11 @@ const AISelectorCommands = ({ onSelect }: AISelectorCommandsProps) => {
         {options.map((option) => (
           <CommandItem
             onSelect={(value) => {
+              console.log("editor", editor)
               const slice = editor.state.selection.content();
-              const text = editor.storage.markdown.serializer.serialize(slice.content);
+              const text = editor.storage.markdown?.serializer 
+                ? editor.storage.markdown.serializer.serialize(slice.content)
+                : editor.getText();
               onSelect(text, value);
             }}
             className="flex gap-2 px-4"
