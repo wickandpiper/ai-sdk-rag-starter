@@ -4,9 +4,13 @@ import { anthropic } from '@ai-sdk/anthropic';
 import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { findRelevantContent } from '@/lib/ai/embedding';
+import { searchEditorContent } from '@/lib/services/editor-service';
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
+
+// Change from Edge runtime to Node.js runtime
+export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
@@ -14,7 +18,7 @@ export async function POST(req: Request) {
   // check if user has sent a PDF
   const messagesHavePDF = messages.some((message: { experimental_attachments: any[]; }) =>
     message.experimental_attachments?.some(
-      (      a: { contentType: string; }) => a.contentType === 'application/pdf',
+      (a: { contentType: string; }) => a.contentType === 'application/pdf',
     ),
   );
 
@@ -34,7 +38,11 @@ export async function POST(req: Request) {
         parameters: z.object({
           content: z.string().describe('the content or resource to add to the knowledge base'),
         }),
-        execute: async ({ content }) => createResource({ content }),
+        execute: async ({ content }) => createResource({ 
+          content, 
+          type: 'text', 
+          metadata: {} 
+        }),
       }),
       getInformation: tool({
         description: `get information from your knowledge base to answer questions.`,
@@ -43,9 +51,45 @@ export async function POST(req: Request) {
         }),
         execute: async ({ question }) => {
           console.log('Fetching info for:', question);
-          const content = await findRelevantContent(question);
-          console.log('Found content:', content);
-          return content || "Sorry, I don't know.";
+          
+          // Search for relevant content from both embeddings and editor content
+          const [embeddingResults, editorResults] = await Promise.all([
+            findRelevantContent(question),
+            searchEditorContent(question)
+          ]);
+          
+          // Combine results
+          let context = '';
+          
+          // Add embedding results
+          if (embeddingResults.length > 0) {
+            context += 'Relevant content from knowledge base:\n';
+            embeddingResults.forEach((result: { name: string; similarity: number }, i: number) => {
+              context += `${i + 1}. ${result.name}\n`;
+            });
+            context += '\n';
+          }
+          
+          // Add editor content results
+          if (editorResults.length > 0) {
+            context += 'Relevant content from editor documents:\n';
+            editorResults.forEach((result, i) => {
+              context += `${i + 1}. ${result.content}\n`;
+              
+              // If there are images in the metadata, include their alt text
+              if (result.metadata?.images && result.metadata.images.length > 0) {
+                context += 'Related images:\n';
+                result.metadata.images.forEach((image, j) => {
+                  if (image.alt) {
+                    context += `  - Image ${j + 1}: ${image.alt}\n`;
+                  }
+                });
+              }
+            });
+            context += '\n';
+          }
+          
+          return context || "Sorry, I don't know.";
         }
       }),
     },

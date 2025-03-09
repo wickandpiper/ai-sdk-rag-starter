@@ -27,15 +27,20 @@ import GenerativeMenuSwitch from "../Tailwind/Generative/generative-menu-switch"
 import { uploadFn } from "../Tailwind/image-upload";
 import { TextButtons } from "./selectors/text-buttons";
 import { slashCommand, suggestionItems } from "../Tailwind/slash-command";
+import { saveEditorContent, getEditorContent } from "@/lib/services/editor-service";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const hljs = require("highlight.js");
 
 const extensions = [...defaultExtensions, slashCommand];
 
-const TailwindAdvancedEditor = () => {
+const TailwindAdvancedEditor = ({ title = "Untitled Note" }) => {
   const [initialContent, setInitialContent] = useState<null | JSONContent>(null);
   const [saveStatus, setSaveStatus] = useState("Saved");
   const [charsCount, setCharsCount] = useState();
+  const [currentResourceId, setCurrentResourceId] = useState<string | null>(null);
+  const router = useRouter();
 
   const [openNode, setOpenNode] = useState(false);
   const [openColor, setOpenColor] = useState(false);
@@ -54,22 +59,133 @@ const TailwindAdvancedEditor = () => {
   };
 
   const debouncedUpdates = useDebouncedCallback(async (editor: EditorInstance) => {
-    const json = editor.getJSON();
-    setCharsCount(editor.storage.characterCount.words());
-    window.localStorage.setItem("html-content", highlightCodeblocks(editor.getHTML()));
-    window.localStorage.setItem("novel-content", JSON.stringify(json));
-    if (editor.storage.markdown) {
-      window.localStorage.setItem("markdown", editor.storage.markdown.getMarkdown());
-    } else {
-      window.localStorage.setItem("markdown", editor.getHTML());
+    try {
+      const json = editor.getJSON();
+      const wordCount = editor.storage.characterCount.words();
+      setCharsCount(wordCount);
+      
+      const htmlContent = highlightCodeblocks(editor.getHTML());
+      const markdownContent = editor.storage.markdown 
+        ? editor.storage.markdown.getMarkdown() 
+        : editor.getHTML();
+      
+      // Save to database using API route
+      const response = await fetch('/api/editor', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonContent: json,
+          htmlContent,
+          markdownContent,
+          wordCount,
+          resourceId: currentResourceId, // Pass the current resource ID if it exists
+          title // Pass the title
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save content');
+      }
+      
+      const data = await response.json();
+      const resourceId = data.resourceId;
+      
+      // Only update URL and state if this is a new resource
+      if (resourceId !== currentResourceId) {
+        setCurrentResourceId(resourceId);
+        
+        // Store the resource ID in localStorage for recovery
+        window.localStorage.setItem("last-resource-id", resourceId);
+        
+        // Update the URL to include the resource ID
+        if (typeof window !== 'undefined' && window.history) {
+          const newUrl = `/notes/${resourceId}`;
+          window.history.pushState({ resourceId }, '', newUrl);
+        }
+      }
+      
+      setSaveStatus("Saved");
+    } catch (error) {
+      console.error("Error saving editor content:", error);
+      setSaveStatus("Error Saving");
+      toast.error("Error saving editor content: " + (error instanceof Error ? error.message : String(error)));
     }
-    setSaveStatus("Saved");
   }, 500);
 
   useEffect(() => {
-    const content = window.localStorage.getItem("novel-content");
-    if (content) setInitialContent(JSON.parse(content));
-    else setInitialContent(defaultEditorContent);
+    const loadContent = async () => {
+      try {
+        // Check URL for resource ID first
+        const pathParts = window.location.pathname.split('/');
+        const urlResourceId = pathParts[pathParts.length - 1];
+        
+        // If URL has a valid resource ID that's not 'new', try loading it
+        if (urlResourceId && urlResourceId !== 'new' && urlResourceId.length > 5) {
+          try {
+            const { metadata } = await getEditorContent(urlResourceId);
+            if (metadata?.jsonContent) {
+              setInitialContent(metadata.jsonContent);
+              setCurrentResourceId(urlResourceId);
+              return;
+            }
+          } catch (error) {
+            console.error("Error loading from URL resource ID:", error);
+          }
+        }
+        
+        // Try to load from localStorage if URL loading failed
+        const lastResourceId = window.localStorage.getItem("last-resource-id");
+        
+        if (lastResourceId) {
+          try {
+            const { metadata } = await getEditorContent(lastResourceId);
+            if (metadata?.jsonContent) {
+              // We have content in the database
+              setInitialContent(metadata.jsonContent);
+              setCurrentResourceId(lastResourceId);
+              
+              // Update URL if we're not already on a note page
+              if (window.location.pathname === '/notes/new') {
+                const newUrl = `/notes/${lastResourceId}`;
+                window.history.replaceState({ resourceId: lastResourceId }, '', newUrl);
+              }
+              
+              return;
+            }
+          } catch (error) {
+            console.error("Error loading from database:", error);
+            // Fall back to localStorage if database fails
+          }
+        }
+        
+        // Fall back to localStorage for unsaved content
+        const content = window.localStorage.getItem("novel-content");
+        if (content) {
+          setInitialContent(JSON.parse(content));
+        } else {
+          setInitialContent(defaultEditorContent);
+        }
+      } catch (error) {
+        console.error("Error loading content:", error);
+        setInitialContent(defaultEditorContent);
+      }
+    };
+    
+    loadContent();
+    
+    // Handle browser navigation events
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state?.resourceId) {
+        setCurrentResourceId(event.state.resourceId);
+        // Reload the content - this would need an additional mechanism to update the editor
+      }
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   if (!initialContent) return null;

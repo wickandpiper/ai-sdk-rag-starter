@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { text, varchar, timestamp, pgTable } from "drizzle-orm/pg-core";
+import { text, varchar, timestamp, pgTable, jsonb } from "drizzle-orm/pg-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -10,6 +10,7 @@ export const resources = pgTable("resources", {
     .primaryKey()
     .$defaultFn(() => nanoid()),
   content: text("content").notNull(),
+  metadata: jsonb("metadata"),
 
   createdAt: timestamp("created_at")
     .notNull()
@@ -30,3 +31,21 @@ export const insertResourceSchema = createSelectSchema(resources)
 
 // Type for resources - used to type API request params and within Components
 export type NewResourceParams = z.infer<typeof insertResourceSchema>;
+
+// Define types for the metadata field
+export type ImageMetadata = {
+  alt?: string;
+  width?: number;
+  height?: number;
+  src: string;
+  mimeType?: string;
+};
+
+export type EditorMetadata = {
+  title?: string;
+  wordCount?: number;
+  htmlContent?: string;
+  markdownContent?: string;
+  jsonContent?: any;
+  images?: ImageMetadata[];
+};
