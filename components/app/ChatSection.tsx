@@ -35,11 +35,34 @@ export function ChatSection({
           {messages.map(m => (
             <div 
               key={m.id} 
-              className={`whitespace-pre-wrap bg-white/80 backdrop-blur-sm rounded-lg p-4 shadow-sm ${m.content ? 'animate-fade-in' : 'hidden'}`}
+              className={`whitespace-pre-wrap ${m.content ? 'animate-fade-in' : 'hidden'} ${
+                m.role === 'assistant' 
+                  ? 'ml-4 mr-12' 
+                  : 'ml-12 mr-4'
+              }`}
             >
-              <div className="font-semibold text-purple-700 mb-2">{m.role === 'assistant' ? 'Chip' : 'You'}</div>
-              <div className="text-purple-900">
-                {m.content}
+              <div 
+                className={`rounded-lg p-4 shadow-sm ${
+                  m.role === 'assistant' 
+                    ? 'bg-gradient-to-br from-purple-100/80 via-white/90 to-indigo-100/80 border border-purple-100 text-purple-900 rounded-lg' 
+                    : 'bg-white/90 backdrop-blur-sm text-purple-900 rounded-lg'
+                }`}
+              >
+                <div className={`font-semibold mb-2 ${
+                  m.role === 'assistant' 
+                    ? 'text-purple-700 flex items-center' 
+                    : 'text-purple-700'
+                }`}>
+                  {m.role === 'assistant' ? (
+                    <>
+                      <span className="mr-2 inline-block w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
+                      Chip
+                    </>
+                  ) : 'You'}
+                </div>
+                <div className="text-purple-900">
+                  {m.content}
+                </div>
               </div>
             </div>
           ))}

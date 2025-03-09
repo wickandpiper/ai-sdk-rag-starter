@@ -6,7 +6,7 @@ export const defaultEditorContent: JSONContent = {
     {
       type: "heading",
       attrs: { level: 1 },
-      content: [{ type: "text", text: "Welcome to your new note" }]
+      content: [{ type: "text", text: "New note" }]
     },
     {
       type: "paragraph",
