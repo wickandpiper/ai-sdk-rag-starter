@@ -5,6 +5,9 @@ import { ProjectSelector } from './ProjectSelector';
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { FileItem } from './types';
+import * as Popover from '@radix-ui/react-popover';
+import { useRouter } from 'next/navigation';
+import { v4 as uuidv4 } from 'uuid';
 
 type HeaderProps = {
   currentProject: string;
@@ -29,6 +32,7 @@ export function Header({
 }: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
 
   const projects = [
     "Default Project",
@@ -41,6 +45,11 @@ export function Header({
   const filteredProjects = projects.filter(project => 
     project.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleCreateNote = () => {
+    router.push('/notes/new');
+    toast.success('Creating new note...');
+  };
 
   return (
     <header className="flex justify-between items-center p-4 bg-white/80 backdrop-blur-sm shadow-sm">
@@ -64,13 +73,42 @@ export function Header({
           />
         </div>
         
-        <Button 
-          className="bg-purple-600 hover:bg-purple-700 text-white flex items-center space-x-2"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Create</span>
-          <ChevronDown className="h-4 w-4" />
-        </Button>
+        <Popover.Root>
+          <Popover.Trigger asChild>
+            <Button 
+              className="bg-purple-600 hover:bg-purple-700 text-white flex items-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Create</span>
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content 
+              className="z-50 w-[180px] rounded-md border bg-white shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2" 
+              sideOffset={4}
+            >
+              <div className="p-1">
+                <button
+                  onClick={handleCreateNote}
+                  className="w-full text-left px-3 py-2 text-sm rounded-sm hover:bg-purple-50 hover:text-purple-700 transition-colors text-gray-700"
+                >
+                  New Note
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-sm hover:bg-purple-50 hover:text-purple-700 transition-colors text-gray-700"
+                >
+                  New Document
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-sm hover:bg-purple-50 hover:text-purple-700 transition-colors text-gray-700"
+                >
+                  New Folder
+                </button>
+              </div>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
         
         <Button 
           className="bg-purple-600 hover:bg-purple-700 text-white flex items-center space-x-2"
@@ -97,6 +135,7 @@ export function Header({
               try {
                 const fileExt = file.name.split('.').pop() || '';
                 const newFile: FileItem = {
+                  id: uuidv4(),
                   name: file.name,
                   date: new Date().toISOString().split('T')[0],
                   type: fileExt,

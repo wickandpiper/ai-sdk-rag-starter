@@ -102,15 +102,30 @@ export default function Home() {
     loadNotes();
   }, []);
 
+  // Convert notes to FileItem format
+  const notesAsFiles: FileItem[] = notes.map(note => ({
+    id: note.id,
+    name: note.title,
+    date: formatDate(note.updatedAt),
+    type: 'note',
+    description: `Word count: ${note.wordCount}`,
+    tags: ['note'],
+    url: `/notes/${note.id}`
+  }));
+
+  // Fallback to sample files if no notes are loaded yet
   const [recentFiles, setRecentFiles] = useState<FileItem[]>([
-    { name: "YIT Construction.pdf", date: "2024-02-24", type: "pdf", description: "User research findings from interviews with 10 participants", tags: ["research", "user-testing"], url: "/sample-files/30d54b9e-03ba-4cdb-8ad4-41332d47073bYITPlatform.pdf" },
-    { name: "Research Notes.pdf", date: "2024-02-24", type: "pdf", description: "User research findings from interviews with 10 participants", tags: ["research", "user-testing"], url: "/sample-files/sample-pdf.pdf" },
-    { name: "User Interviews.docx", date: "2024-02-23", type: "docx", description: "Transcripts from user interviews conducted in February", tags: ["research", "interviews"], url: "/sample-files/sample-word.docx" },
-    { name: "Design Brief.pdf", date: "2024-02-22", type: "pdf", description: "Project requirements and design specifications", tags: ["design", "requirements"], url: "/sample-files/sample-pdf.pdf" },
-    { name: "Persona Template.pptx", date: "2024-02-21", type: "pptx", description: "Template for creating user personas", tags: ["templates", "personas"], url: "/sample-files/sample-powerpoint.pptx" },
+    { id: "sample-1", name: "YIT Construction.pdf", date: "2024-02-24", type: "pdf", description: "User research findings from interviews with 10 participants", tags: ["research", "user-testing"], url: "/sample-files/30d54b9e-03ba-4cdb-8ad4-41332d47073bYITPlatform.pdf" },
+    { id: "sample-2", name: "Research Notes.pdf", date: "2024-02-24", type: "pdf", description: "User research findings from interviews with 10 participants", tags: ["research", "user-testing"], url: "/sample-files/sample-pdf.pdf" },
+    { id: "sample-3", name: "User Interviews.docx", date: "2024-02-23", type: "docx", description: "Transcripts from user interviews conducted in February", tags: ["research", "interviews"], url: "/sample-files/sample-word.docx" },
+    { id: "sample-4", name: "Design Brief.pdf", date: "2024-02-22", type: "pdf", description: "Project requirements and design specifications", tags: ["design", "requirements"], url: "/sample-files/sample-pdf.pdf" },
+    { id: "sample-5", name: "Persona Template.pptx", date: "2024-02-21", type: "pptx", description: "Template for creating user personas", tags: ["templates", "personas"], url: "/sample-files/sample-powerpoint.pptx" },
   ]);
 
-  const filteredFiles = recentFiles
+  // Combine notes with recent files
+  const allFiles = [...notesAsFiles, ...recentFiles];
+
+  const filteredFiles = allFiles
     .filter(file => 
       (fileFilter === "all" || file.type === fileFilter) &&
       (file.name.toLowerCase().includes(fileSearchQuery.toLowerCase()) ||
@@ -146,6 +161,9 @@ export default function Home() {
           setViewMode={setViewMode}
           filteredFiles={filteredFiles}
           getFileIcon={getFileIcon}
+          hasMoreNotes={hasMoreNotes}
+          isLoadingNotes={isLoadingNotes}
+          onLoadMoreNotes={loadMoreNotes}
         />
         
         <ChatSection 
@@ -161,6 +179,12 @@ export default function Home() {
           recentFiles={recentFiles}
         />
       </div>
+      
+      {isLoadingNotes && (
+        <div className="fixed bottom-4 right-4 bg-purple-600 text-white px-4 py-2 rounded-md shadow-lg">
+          Loading notes...
+        </div>
+      )}
     </div>
   );
 } 

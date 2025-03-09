@@ -5,6 +5,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { useRef } from 'react';
 import { toast } from 'sonner';
 import { FileItem } from './types';
+import { v4 as uuidv4 } from 'uuid';
 
 type ChatInputProps = {
   input: string;
@@ -129,6 +130,7 @@ export function ChatInput({
                               try {
                                 const fileExt = file.name.split('.').pop() || '';
                                 const newFile: FileItem = {
+                                  id: uuidv4(),
                                   name: file.name,
                                   date: new Date().toISOString().split('T')[0],
                                   type: fileExt,

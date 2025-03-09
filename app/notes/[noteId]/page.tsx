@@ -2,30 +2,49 @@
 
 import TailwindAdvancedEditor from "@/components/ui/Editor/editor";
 import { useEffect, useState } from "react";
-import { getEditorContent } from "@/lib/services/editor-service";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Plus, Users, MessageSquare, Palette, ListOrdered, Loader2 } from "lucide-react";
+import { fetchNoteMetadata } from "@/lib/services/client-note-service";
+import { toast } from "sonner";
 
 export default function NotePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState("Untitled Note");
-  const params = useParams();
+  const [isNewNote, setIsNewNote] = useState(false);
+  const params = useParams<{ noteId: string }>();
   const router = useRouter();
-  const noteId = params.noteId as string;
+  const noteId = params?.noteId || 'new';
 
   useEffect(() => {
     const loadNoteTitle = async () => {
-      if (noteId) {
-        try {
-          const { metadata } = await getEditorContent(noteId);
-          if (metadata?.title) {
-            setTitle(metadata.title);
-          }
-        } catch (e) {
-          console.error("Error loading note title:", e);
+      // Check if this is a new note
+      if (noteId === 'new') {
+        setTitle("New Note");
+        setIsNewNote(true);
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        // Show loading toast
+        toast.loading("Loading note...", {
+          id: "note-loading",
+          duration: 2000
+        });
+        
+        // Use the client-side service to fetch metadata
+        const metadata = await fetchNoteMetadata(noteId);
+        
+        if (metadata?.title) {
+          setTitle(metadata.title);
+          toast.success("Note loaded successfully", { id: "note-loading" });
         }
+      } catch (e) {
+        console.error("Error loading note title:", e);
+        toast.error("Failed to load note", { id: "note-loading" });
+        setError("Failed to load note content");
       }
       
       // Set loading to false after a brief delay to show the loading state
@@ -44,7 +63,7 @@ export default function NotePage() {
         <div className="flex items-center space-x-2">
           <Link href="/" className="hover:text-purple-800">Home</Link>
           <span>›</span>
-          <span className="text-purple-800">{isLoading ? "Loading..." : title}</span>
+          <span className="text-purple-800">{isLoading ? "Loading..." : isNewNote ? "New Note" : title}</span>
         </div>
       </div>
 
@@ -89,7 +108,7 @@ export default function NotePage() {
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <TailwindAdvancedEditor title={title} />
+            <TailwindAdvancedEditor title={title} initialResourceId={isNewNote ? undefined : noteId} />
           </div>
         )}
       </main>

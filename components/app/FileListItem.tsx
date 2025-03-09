@@ -3,12 +3,17 @@ import { FileItem } from './types';
 type FileListItemProps = {
   file: FileItem;
   getFileIcon: (fileType: string) => JSX.Element;
+  onFileSelect: (file: FileItem) => void;
+  isSelected?: boolean;
 };
 
-export function FileListItem({ file, getFileIcon }: FileListItemProps) {
+export function FileListItem({ file, getFileIcon, onFileSelect, isSelected = false }: FileListItemProps) {
   return (
     <div 
-      className="flex items-center p-2 hover:bg-purple-50 rounded-md cursor-pointer"
+      className={`flex items-center p-2 hover:bg-purple-50 rounded-md cursor-pointer ${
+        isSelected ? 'bg-purple-100 border border-purple-200' : ''
+      }`}
+      onClick={() => onFileSelect(file)}
     >
       <div className="mr-3">
         {getFileIcon(file.type)}

@@ -1,4 +1,4 @@
-import { FileIcon, FileText, FileImage, FileSpreadsheet, PresentationIcon } from 'lucide-react';
+import { FileIcon, FileText, FileImage, FileSpreadsheet, PresentationIcon, Notebook } from 'lucide-react';
 
 // Get file icon based on file type
 export const getFileIcon = (fileType: string) => {
@@ -15,6 +15,8 @@ export const getFileIcon = (fileType: string) => {
     case 'jpg':
     case 'jpeg':
       return <FileImage className="h-5 w-5 text-purple-600" />;
+    case 'note':
+      return <Notebook className="h-5 w-5 text-purple-800" />;
     default:
       return <FileText className="h-5 w-5 text-gray-600" />;
   }

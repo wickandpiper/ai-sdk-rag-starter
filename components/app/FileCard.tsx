@@ -4,11 +4,18 @@ import { FileItem } from './types';
 type FileCardProps = {
   file: FileItem;
   getFileIcon: (fileType: string) => JSX.Element;
+  onFileSelect: (file: FileItem) => void;
+  isSelected?: boolean;
 };
 
-export function FileCard({ file, getFileIcon }: FileCardProps) {
+export function FileCard({ file, getFileIcon, onFileSelect, isSelected = false }: FileCardProps) {
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+    <Card 
+      className={`overflow-hidden hover:shadow-lg transition-shadow cursor-pointer ${
+        isSelected ? 'ring-2 ring-purple-400 shadow-md' : ''
+      }`}
+      onClick={() => onFileSelect(file)}
+    >
       <div className="p-3 border-b border-purple-100">
         <div className="flex justify-between items-start">
           <div className="flex items-center space-x-2">

@@ -6,29 +6,31 @@ import DOCXPreview from './DOCXPreview';
 import XLSXPreview from './XLSXPreview';
 import PPTXPreview from './PPTXPreview';
 import ImagePreview from './ImagePreview';
+import NotePreview from './NotePreview';
+import { ActionHeader } from './ActionHeader';
 import { 
-  FileText, 
-  FileImage, 
-  FileSpreadsheet, 
-  File as FileIcon, 
-  Presentation as PresentationIcon,
-  AlertCircle
+  AlertCircle,
+  FileText
 } from 'lucide-react';
+import { FileItem } from '../app/types';
 
 interface FilePreviewProps {
-  file: {
-    name: string;
-    type: string;
-    url: string;
-  };
+  file: FileItem;
+  onEditNote?: () => void;
 }
 
-export default function FilePreview({ file }: FilePreviewProps) {
+export default function FilePreview({ file, onEditNote }: FilePreviewProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Render the appropriate preview component based on file type
   const renderFilePreview = () => {
     try {
+      // Handle note type
+      if (file.type === 'note') {
+        return <NotePreview file={file} onEdit={onEditNote} />;
+      }
+
+      // Handle other file types that require URL
       if (!file.url) {
         return (
           <div className="flex flex-col items-center justify-center p-12">
@@ -58,14 +60,16 @@ export default function FilePreview({ file }: FilePreviewProps) {
               <FileText className="h-16 w-16 text-gray-400 mb-4" />
               <p className="text-lg font-medium text-gray-700">No preview available</p>
               <p className="text-sm text-gray-500 mt-1">This file type cannot be previewed</p>
-              <a 
-                href={file.url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm"
-              >
-                Download File
-              </a>
+              {file.url && (
+                <a 
+                  href={file.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm"
+                >
+                  Download File
+                </a>
+              )}
             </div>
           );
       }
@@ -82,29 +86,15 @@ export default function FilePreview({ file }: FilePreviewProps) {
     }
   };
 
-  // Render file icon based on file type
-  const renderFileIcon = (fileType: string) => {
-    switch (fileType) {
-      case 'pdf':
-        return <FileIcon className="h-5 w-5 text-red-600" />;
-      case 'docx':
-        return <FileText className="h-5 w-5 text-blue-600" />;
-      case 'xlsx':
-        return <FileSpreadsheet className="h-5 w-5 text-green-600" />;
-      case 'pptx':
-        return <PresentationIcon className="h-5 w-5 text-orange-600" />;
-      case 'png':
-      case 'jpg':
-      case 'jpeg':
-        return <FileImage className="h-5 w-5 text-purple-600" />;
-      default:
-        return <FileText className="h-5 w-5 text-gray-600" />;
-    }
-  };
-
   return (
-    <div className="w-full">
-      {renderFilePreview()}
+    <div className="w-full h-full flex flex-col">
+      {/* Common action header for all file types */}
+      <ActionHeader file={file} onEdit={file.type === 'note' ? onEditNote : undefined} />
+      
+      {/* File preview content */}
+      <div className="flex-1 overflow-y-auto">
+        {renderFilePreview()}
+      </div>
     </div>
   );
 } 

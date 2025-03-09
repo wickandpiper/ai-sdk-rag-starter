@@ -30,22 +30,43 @@ import { slashCommand, suggestionItems } from "../Tailwind/slash-command";
 import { saveEditorContent, getEditorContent } from "@/lib/services/editor-service";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { fetchNoteContent } from "@/lib/services/client-note-service";
 
 const hljs = require("highlight.js");
 
 const extensions = [...defaultExtensions, slashCommand];
 
-const TailwindAdvancedEditor = ({ title = "Untitled Note" }) => {
-  const [initialContent, setInitialContent] = useState<null | JSONContent>(null);
-  const [saveStatus, setSaveStatus] = useState("Saved");
-  const [charsCount, setCharsCount] = useState();
-  const [currentResourceId, setCurrentResourceId] = useState<string | null>(null);
+const TailwindAdvancedEditor = ({ 
+  title = "Untitled Note",
+  initialResourceId
+}: { 
+  title?: string,
+  initialResourceId?: string
+}) => {
+  const [saveStatus, setSaveStatus] = useState<string>("Saved");
+  const [charsCount, setCharsCount] = useState<number>(0);
+  const [currentResourceId, setCurrentResourceId] = useState<string | null>(initialResourceId || null);
+  const [isFirstSave, setIsFirstSave] = useState(true);
   const router = useRouter();
 
   const [openNode, setOpenNode] = useState(false);
   const [openColor, setOpenColor] = useState(false);
   const [openLink, setOpenLink] = useState(false);
   const [openAI, setOpenAI] = useState(false);
+
+  // Initialize editor with stored content if available
+  const storedContent = typeof window !== 'undefined' ? window.localStorage.getItem('novel-content') : null;
+  const initialContent = storedContent ? JSON.parse(storedContent) : defaultEditorContent;
+  
+  // Initialize editor with stored content if available
+  useEffect(() => {
+    // If we have an initialResourceId, we should clear any cached content
+    if (initialResourceId) {
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('novel-content');
+      }
+    }
+  }, [initialResourceId]);
 
   //Apply Codeblock Highlighting on the HTML from editor.getHTML()
   const highlightCodeblocks = (content: string) => {
@@ -101,9 +122,10 @@ const TailwindAdvancedEditor = ({ title = "Untitled Note" }) => {
         window.localStorage.setItem("last-resource-id", resourceId);
         
         // Update the URL to include the resource ID
-        if (typeof window !== 'undefined' && window.history) {
+        if (typeof window !== 'undefined' && window.history && isFirstSave) {
           const newUrl = `/notes/${resourceId}`;
           window.history.pushState({ resourceId }, '', newUrl);
+          setIsFirstSave(false);
         }
       }
       
@@ -117,75 +139,77 @@ const TailwindAdvancedEditor = ({ title = "Untitled Note" }) => {
 
   useEffect(() => {
     const loadContent = async () => {
-      try {
-        // Check URL for resource ID first
-        const pathParts = window.location.pathname.split('/');
-        const urlResourceId = pathParts[pathParts.length - 1];
-        
-        // If URL has a valid resource ID that's not 'new', try loading it
-        if (urlResourceId && urlResourceId !== 'new' && urlResourceId.length > 5) {
-          try {
-            const { metadata } = await getEditorContent(urlResourceId);
-            if (metadata?.jsonContent) {
-              setInitialContent(metadata.jsonContent);
-              setCurrentResourceId(urlResourceId);
-              return;
-            }
-          } catch (error) {
-            console.error("Error loading from URL resource ID:", error);
+      // Check if we have a resource ID in the URL
+      if (typeof window !== 'undefined') {
+        try {
+          const urlPath = window.location.pathname;
+          const urlResourceId = urlPath.split('/').pop();
+          
+          // If we're creating a new note
+          if (urlResourceId === 'new') {
+            setCurrentResourceId(null);
+            return;
           }
-        }
-        
-        // Try to load from localStorage if URL loading failed
-        const lastResourceId = window.localStorage.getItem("last-resource-id");
-        
-        if (lastResourceId) {
-          try {
-            const { metadata } = await getEditorContent(lastResourceId);
-            if (metadata?.jsonContent) {
-              // We have content in the database
-              setInitialContent(metadata.jsonContent);
-              setCurrentResourceId(lastResourceId);
+          
+          // If we have a resource ID in the URL, try to load the content
+          if (urlResourceId && urlResourceId !== 'new') {
+            try {
+              // Show loading toast
+              toast.loading("Loading note content...", {
+                id: "note-content-loading"
+              });
               
-              // Update URL if we're not already on a note page
-              if (window.location.pathname === '/notes/new') {
-                const newUrl = `/notes/${lastResourceId}`;
-                window.history.replaceState({ resourceId: lastResourceId }, '', newUrl);
+              // Try to load from localStorage first
+              const cachedContent = localStorage.getItem(`note-content-${urlResourceId}`);
+              if (cachedContent) {
+                // Use cached content
+                toast.success("Note loaded from cache", { id: "note-content-loading" });
+                return;
               }
               
-              return;
+              // Fetch from API
+              const result = await fetchNoteContent(urlResourceId);
+              
+              if (result.metadata && result.metadata.jsonContent) {
+                setCurrentResourceId(urlResourceId);
+                toast.success("Note loaded successfully");
+                
+                // Cache the content
+                localStorage.setItem(`note-content-${urlResourceId}`, JSON.stringify(result.metadata.jsonContent));
+                localStorage.setItem(`note-metadata-${urlResourceId}`, JSON.stringify(result.metadata));
+                
+                return;
+              }
+            } catch (error) {
+              console.error("Error loading note content:", error);
+              toast.error("Failed to load note content", { id: "note-content-loading" });
             }
-          } catch (error) {
-            console.error("Error loading from database:", error);
-            // Fall back to localStorage if database fails
           }
+          
+          // Default case: use default content
+          setCurrentResourceId(null);
+        } catch (error) {
+          console.error("Error in content loading process:", error);
+          toast.error("Error loading content");
+          setCurrentResourceId(null);
         }
-        
-        // Fall back to localStorage for unsaved content
-        const content = window.localStorage.getItem("novel-content");
-        if (content) {
-          setInitialContent(JSON.parse(content));
-        } else {
-          setInitialContent(defaultEditorContent);
+      };
+      
+      loadContent();
+      
+      // Handle browser navigation events
+      const handlePopState = (event: PopStateEvent) => {
+        if (event.state && event.state.resourceId) {
+          // Force reload the page to get fresh content
+          window.location.reload();
         }
-      } catch (error) {
-        console.error("Error loading content:", error);
-        setInitialContent(defaultEditorContent);
-      }
+      };
+      
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
     };
     
     loadContent();
-    
-    // Handle browser navigation events
-    const handlePopState = (event: PopStateEvent) => {
-      if (event.state?.resourceId) {
-        setCurrentResourceId(event.state.resourceId);
-        // Reload the content - this would need an additional mechanism to update the editor
-      }
-    };
-    
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   if (!initialContent) return null;
