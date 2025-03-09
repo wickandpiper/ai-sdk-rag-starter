@@ -15,6 +15,7 @@ export default function NotePreview({ file, onEdit }: NotePreviewProps) {
   const [parsedContent, setParsedContent] = useState<any>(null);
   
   useEffect(() => {
+    console.log("NotePreview: file changed", file.id || file.name);
     // Parse the content if it's available
     if (file.content) {
       try {
@@ -36,7 +37,8 @@ export default function NotePreview({ file, onEdit }: NotePreviewProps) {
         setParsedContent(null);
       }
     }
-  }, [file.content]);
+  // Add file.id, file.name, and file.date to ensure the effect runs when the file changes
+  }, [file.id, file.name, file.date, file.content]);
   
   if (!file.content) {
     return (
@@ -79,13 +81,17 @@ export default function NotePreview({ file, onEdit }: NotePreviewProps) {
       <div className="p-4 h-full">
         {hasEditorContent ? (
           <TailwindAdvancedEditor 
+            key={`note-${file.id || file.name}-${Date.now()}`}
             title={file.name}
             initialResourceId={file.id}
             readOnly={true}
             initialContent={editorContent}
           />
         ) : (
-          <div className="prose prose-sm max-w-none">
+          <div 
+            key={`text-${file.id || file.name}-${Date.now()}`} 
+            className="prose prose-sm max-w-none"
+          >
             <pre className="whitespace-pre-wrap font-sans">{contentToDisplay}</pre>
           </div>
         )}
