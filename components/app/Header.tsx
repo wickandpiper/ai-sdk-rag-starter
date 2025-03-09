@@ -95,16 +95,6 @@ export function Header({
                 >
                   New Note
                 </button>
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-sm hover:bg-purple-50 hover:text-purple-700 transition-colors text-gray-700"
-                >
-                  New Document
-                </button>
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-sm hover:bg-purple-50 hover:text-purple-700 transition-colors text-gray-700"
-                >
-                  New Folder
-                </button>
               </div>
             </Popover.Content>
           </Popover.Portal>

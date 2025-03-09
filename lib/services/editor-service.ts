@@ -219,7 +219,7 @@ export const getEditorContent = async (resourceId: string): Promise<{
     // Use raw SQL to select
     const result = await dbClient.execute({
       text: `
-        SELECT content
+        SELECT content, updated_at
         FROM resources
         WHERE id = $1
         LIMIT 1
@@ -228,8 +228,11 @@ export const getEditorContent = async (resourceId: string): Promise<{
     });
     
     if (result.length === 0) {
+      console.error(`Editor content not found for resource ID: ${resourceId}`);
       throw new Error(`Editor content not found for resource ID: ${resourceId}`);
     }
+    
+    console.log(`Found resource with ID ${resourceId}, content type: ${typeof result[0].content}, length: ${result[0].content?.length || 0}`);
     
     // Try to parse the content as JSON
     try {
@@ -239,10 +242,35 @@ export const getEditorContent = async (resourceId: string): Promise<{
         metadata: editorData,
       };
     } catch (e) {
-      // If parsing fails, return the content as is
+      console.error(`Error parsing JSON content for resource ID ${resourceId}:`, e);
+      console.log('Content sample:', result[0].content?.substring(0, 100));
+      
+      // If parsing fails, create a basic metadata structure with the raw content
+      // This ensures the editor has something to display
+      const fallbackMetadata: EditorMetadata = {
+        title: `Note ${resourceId.substring(0, 8)}`,
+        wordCount: 0,
+        htmlContent: '',
+        markdownContent: result[0].content || '',
+        jsonContent: {
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: result[0].content || 'Content could not be parsed'
+                }
+              ]
+            }
+          ]
+        }
+      };
+      
       return {
-        content: result[0].content,
-        metadata: null,
+        content: result[0].content || '',
+        metadata: fallbackMetadata,
       };
     }
   } catch (error) {
@@ -321,6 +349,10 @@ export const getAllNotes = async (page: number = 1, pageSize: number = 10): Prom
   title: string;
   updatedAt: string;
   wordCount: number;
+  htmlContent: string;
+  markdownContent: string;
+  jsonContent: JSONContent;
+  images: ImageMetadata[];
 }>> => {
   try {
     // Wait for database initialization
@@ -344,11 +376,19 @@ export const getAllNotes = async (page: number = 1, pageSize: number = 10): Prom
     return results.map((row: any) => {
       let title = "Untitled Note";
       let wordCount = 0;
+      let htmlContent = "";
+      let markdownContent = "";
+      let jsonContent: JSONContent = {};
+      let images: ImageMetadata[] = [];
       
       try {
         const content = JSON.parse(row.content);
         title = content.title || "Untitled Note";
         wordCount = content.wordCount || 0;
+        htmlContent = content.htmlContent || "";
+        markdownContent = content.markdownContent || "";
+        jsonContent = content.jsonContent || {};
+        images = content.images || [];
       } catch (e) {
         // If parsing fails, use default values
       }
@@ -357,7 +397,11 @@ export const getAllNotes = async (page: number = 1, pageSize: number = 10): Prom
         id: row.id,
         title,
         updatedAt: row.updated_at,
-        wordCount
+        wordCount,
+        htmlContent,
+        markdownContent,
+        jsonContent,
+        images
       };
     });
   } catch (error) {

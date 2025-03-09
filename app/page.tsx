@@ -32,6 +32,10 @@ export default function Home() {
     title: string;
     updatedAt: string;
     wordCount: number;
+    htmlContent?: string;
+    markdownContent?: string;
+    jsonContent?: any;
+    images?: any[];
   }>>([]);
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -110,7 +114,15 @@ export default function Home() {
     type: 'note',
     description: `Word count: ${note.wordCount}`,
     tags: ['note'],
-    url: `/notes/${note.id}`
+    url: `/notes/${note.id}`,
+    content: {
+      title: note.title,
+      wordCount: note.wordCount,
+      htmlContent: note.htmlContent,
+      markdownContent: note.markdownContent,
+      jsonContent: note.jsonContent,
+      images: note.images
+    }
   }));
 
   // Fallback to sample files if no notes are loaded yet

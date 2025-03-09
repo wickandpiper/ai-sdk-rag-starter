@@ -6,9 +6,12 @@ export async function GET(
   { params }: { params: { noteId: string } }
 ) {
   try {
-    const noteId = params.noteId;
+    const { noteId } = await params;
+    
+    console.log(`API: Fetching note with ID: ${noteId}`);
     
     if (!noteId) {
+      console.error('API: Note ID is missing');
       return NextResponse.json(
         { error: 'Note ID is required' },
         { status: 400 }
@@ -17,11 +20,17 @@ export async function GET(
     
     const { content, metadata } = await getEditorContent(noteId);
     
+    console.log('API: Note fetched successfully', { 
+      hasContent: !!content, 
+      hasMetadata: !!metadata,
+      metadataHasJsonContent: metadata && !!metadata.jsonContent
+    });
+    
     return NextResponse.json({ content, metadata });
   } catch (error) {
-    console.error('Error fetching note:', error);
+    console.error('API: Error fetching note:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch note content' },
+      { error: 'Failed to fetch note content: ' + (error instanceof Error ? error.message : String(error)) },
       { status: 500 }
     );
   }

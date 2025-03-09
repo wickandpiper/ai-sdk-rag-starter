@@ -3,6 +3,8 @@
 import { NoteLayout } from '../app/NoteLayout';
 import { FileItem } from '../app/types';
 import { AlertCircle } from 'lucide-react';
+import TailwindAdvancedEditor from '../ui/Editor/editor';
+import { useState, useEffect } from 'react';
 
 interface NotePreviewProps {
   file: FileItem;
@@ -10,6 +12,32 @@ interface NotePreviewProps {
 }
 
 export default function NotePreview({ file, onEdit }: NotePreviewProps) {
+  const [parsedContent, setParsedContent] = useState<any>(null);
+  
+  useEffect(() => {
+    // Parse the content if it's available
+    if (file.content) {
+      try {
+        // If content is a string, try to parse it as JSON
+        if (typeof file.content === 'string') {
+          try {
+            const parsed = JSON.parse(file.content);
+            setParsedContent(parsed);
+          } catch (e) {
+            // If it's not valid JSON, just use it as plain text
+            setParsedContent(null);
+          }
+        } else {
+          // If content is already an object, use it directly
+          setParsedContent(file.content);
+        }
+      } catch (error) {
+        console.error("Error parsing content:", error);
+        setParsedContent(null);
+      }
+    }
+  }, [file.content]);
+  
   if (!file.content) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
@@ -20,6 +48,25 @@ export default function NotePreview({ file, onEdit }: NotePreviewProps) {
     );
   }
 
+  // Determine content to display based on content type
+  let contentToDisplay = '';
+  if (typeof file.content === 'string') {
+    contentToDisplay = file.content;
+  } else {
+    // Use type assertion to tell TypeScript this is an object with markdownContent
+    const contentObj = file.content as any;
+    contentToDisplay = contentObj.markdownContent || '';
+  }
+
+  // Check if we have valid JSON content for the editor
+  const hasEditorContent = parsedContent && 
+    (parsedContent.jsonContent || 
+     (parsedContent.type === 'doc' && parsedContent.content));
+
+  // If we have jsonContent directly, use it, otherwise check if the content itself is a valid editor document
+  const editorContent = parsedContent?.jsonContent || 
+    (parsedContent?.type === 'doc' ? parsedContent : null);
+
   return (
     <NoteLayout
       title={file.name}
@@ -29,10 +76,19 @@ export default function NotePreview({ file, onEdit }: NotePreviewProps) {
       file={file}
       onEdit={onEdit}
     >
-      <div className="p-4">
-        <div className="prose prose-sm max-w-none">
-          <pre className="whitespace-pre-wrap font-sans">{file.content?.markdownContent}</pre>
-        </div>
+      <div className="p-4 h-full">
+        {hasEditorContent ? (
+          <TailwindAdvancedEditor 
+            title={file.name}
+            initialResourceId={file.id}
+            readOnly={true}
+            initialContent={editorContent}
+          />
+        ) : (
+          <div className="prose prose-sm max-w-none">
+            <pre className="whitespace-pre-wrap font-sans">{contentToDisplay}</pre>
+          </div>
+        )}
       </div>
     </NoteLayout>
   );

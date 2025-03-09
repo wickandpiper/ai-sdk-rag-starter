@@ -88,8 +88,10 @@ export default function FilePreview({ file, onEditNote }: FilePreviewProps) {
 
   return (
     <div className="w-full h-full flex flex-col">
-      {/* Common action header for all file types */}
-      <ActionHeader file={file} onEdit={file.type === 'note' ? onEditNote : undefined} />
+      {/* Only show ActionHeader for non-note file types */}
+      {file.type !== 'note' && (
+        <ActionHeader file={file} onEdit={file.type === 'note' ? onEditNote : undefined} />
+      )}
       
       {/* File preview content */}
       <div className="flex-1 overflow-y-auto">

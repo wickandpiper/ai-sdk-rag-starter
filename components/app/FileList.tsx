@@ -33,8 +33,6 @@ export function FileList({
   const [isNavigating, setIsNavigating] = useState(false);
   const router = useRouter();
 
-  console.log("selectedFile", selectedFile)
-
   const handleFileSelect = (file: FileItem) => {
     setSelectedFile(file);
     console.log("Selected file with ID:", file.id || "No ID available");
